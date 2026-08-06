@@ -1,0 +1,9 @@
+build/
+*.iso
+*.bin
+*.o
+*.log
+*.img
+*.vdi
+*.vmdk
+*.vmx
