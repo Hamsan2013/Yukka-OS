@@ -4,17 +4,19 @@ KERNEL := build/kernel.bin
 CC ?= gcc
 CXX ?= g++
 
+# Critical kernel compiler flags for x86_64 freestanding
 CFLAGS := -std=gnu11 -ffreestanding -fno-stack-protector -mno-red-zone \
           -mno-sse -mno-sse2 -mno-mmx -fno-builtin -O2 -Wall -Wextra \
-          -Ikernel/include
+          -Ikernel/include -m64 -mcmodel=kernel -fno-pic
 
 CXXFLAGS := -std=c++20 -ffreestanding -fno-stack-protector -mno-red-zone \
             -mno-sse -mno-sse2 -mno-mmx -fno-builtin -fno-exceptions \
             -fno-rtti -fno-use-cxa-atexit -fno-threadsafe-statics \
-            -O2 -Wall -Wextra -Ikernel/include -Iyakka/include
+            -O2 -Wall -Wextra -Ikernel/include -Iyakka/include -m64 \
+            -mcmodel=kernel -fno-pic
 
-ASFLAGS := -ffreestanding -O2
-LDFLAGS := -nostdlib -static -T linker.ld
+ASFLAGS := -ffreestanding -O2 -m64
+LDFLAGS := -nostdlib -T linker.ld -lgcc -z max-page-size=0x1000
 
 ifeq ($(TEST),1)
 CFLAGS += -DENABLE_TESTS
@@ -23,9 +25,9 @@ endif
 
 C_SRCS := $(shell find kernel drivers terminal yakka apps -name '*.c')
 CPP_SRCS := $(shell find kernel drivers terminal yakka apps -name '*.cpp')
-ASM_SRCS := boot/x86_64/boot.S
+ASM_SRCS := boot/x86_64/boot.S kernel/arch/x86_64/isr_stub.S
 
-OBJS := build/boot.o $(C_SRCS:%.c=build/%.o) $(CPP_SRCS:%.cpp=build/%.o)
+OBJS := $(ASM_SRCS:%.S=build/%.o) $(C_SRCS:%.c=build/%.o) $(CPP_SRCS:%.cpp=build/%.o)
 
 .PHONY: all kernel iso run test clean
 
@@ -35,10 +37,14 @@ kernel: $(KERNEL)
 
 $(KERNEL): $(OBJS)
 	mkdir -p build
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $(OBJS) -lgcc
+	$(CXX) $(LDFLAGS) -o $@ $(OBJS)
 
 build/boot.o: boot/x86_64/boot.S
 	mkdir -p build
+	$(CC) $(ASFLAGS) -c $< -o $@
+
+build/kernel/arch/x86_64/isr_stub.o: kernel/arch/x86_64/isr_stub.S
+	mkdir -p build/kernel/arch/x86_64
 	$(CC) $(ASFLAGS) -c $< -o $@
 
 build/%.o: %.c
