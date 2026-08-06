@@ -4,7 +4,6 @@ KERNEL := build/kernel.bin
 CC ?= gcc
 CXX ?= g++
 
-# Critical kernel compiler flags for x86_64 freestanding
 CFLAGS := -std=gnu11 -ffreestanding -fno-stack-protector -mno-red-zone \
           -mno-sse -mno-sse2 -mno-mmx -fno-builtin -O2 -Wall -Wextra \
           -Ikernel/include -m64 -mcmodel=kernel -fno-pic
@@ -25,9 +24,9 @@ endif
 
 C_SRCS := $(shell find kernel drivers terminal yakka apps -name '*.c')
 CPP_SRCS := $(shell find kernel drivers terminal yakka apps -name '*.cpp')
-ASM_SRCS := boot/x86_64/boot.S kernel/arch/x86_64/isr_stub.S
+ASM_SRCS := boot.S isr_stub.S
 
-OBJS := $(ASM_SRCS:%.S=build/%.o) $(C_SRCS:%.c=build/%.o) $(CPP_SRCS:%.cpp=build/%.o)
+OBJS := build/boot.o build/isr_stub.o $(C_SRCS:%.c=build/%.o) $(CPP_SRCS:%.cpp=build/%.o)
 
 .PHONY: all kernel iso run test clean
 
@@ -43,8 +42,8 @@ build/boot.o: boot/x86_64/boot.S
 	mkdir -p build
 	$(CC) $(ASFLAGS) -c $< -o $@
 
-build/kernel/arch/x86_64/isr_stub.o: kernel/arch/x86_64/isr_stub.S
-	mkdir -p build/kernel/arch/x86_64
+build/isr_stub.o: kernel/arch/x86_64/isr_stub.S
+	mkdir -p build
 	$(CC) $(ASFLAGS) -c $< -o $@
 
 build/%.o: %.c
