@@ -6,16 +6,16 @@ CXX ?= g++
 
 CFLAGS := -std=gnu11 -ffreestanding -fno-stack-protector -mno-red-zone \
           -mno-sse -mno-sse2 -mno-mmx -fno-builtin -O2 -Wall -Wextra \
-          -Ikernel/include -m64 -mcmodel=kernel -fno-pic
+          -Ikernel/include -m64 -mcmodel=kernel -fno-pic -fno-pie
 
 CXXFLAGS := -std=c++20 -ffreestanding -fno-stack-protector -mno-red-zone \
             -mno-sse -mno-sse2 -mno-mmx -fno-builtin -fno-exceptions \
             -fno-rtti -fno-use-cxa-atexit -fno-threadsafe-statics \
             -O2 -Wall -Wextra -Ikernel/include -Iyakka/include -m64 \
-            -mcmodel=kernel -fno-pic
+            -mcmodel=kernel -fno-pic -fno-pie
 
 ASFLAGS := -ffreestanding -O2 -m64
-LDFLAGS := -nostdlib -T linker.ld -lgcc -z max-page-size=0x1000
+LDFLAGS := -nostdlib -no-pie -T linker.ld -lgcc -z max-page-size=0x1000
 
 ifeq ($(TEST),1)
 CFLAGS += -DENABLE_TESTS
