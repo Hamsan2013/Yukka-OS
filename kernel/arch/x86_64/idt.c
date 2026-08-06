@@ -1,3 +1,4 @@
+// kernel/arch/x86_64/idt.c
 #include <kernel.h>
 
 typedef struct {
@@ -26,69 +27,62 @@ typedef struct {
 static idt_entry_t idt[256];
 static idtr_t idtr;
 
-__attribute__((interrupt))
-void isr_common_noerr(interrupt_frame_t* frame) {
-    (void)frame;
-    panic("CPU exception");
+// Plain C handlers - NO __attribute__((interrupt))
+void isr_common_noerr(void) {
+    panic("CPU exception (no error code)");
 }
 
-__attribute__((interrupt))
-void isr_common_error(interrupt_frame_t* frame, uint64_t error) {
-    (void)frame;
-    (void)error;
-    panic("CPU exception with error");
+void isr_common_error(uint64_t error_code) {
+    (void)error_code;
+    panic("CPU exception (with error code)");
 }
 
-__attribute__((interrupt))
-void irq_pit(interrupt_frame_t* frame) {
-    (void)frame;
+void irq_pit_handler(void) {
     pit_tick();
     outb(0x20, 0x20);
 }
 
-__attribute__((interrupt))
-void irq_keyboard(interrupt_frame_t* frame) {
-    (void)frame;
+void irq_keyboard_handler(void) {
     uint8_t scancode = inb(0x60);
     keyboard_handle_scancode(scancode);
     outb(0x20, 0x20);
 }
 
-__attribute__((interrupt))
-void irq_spurious(interrupt_frame_t* frame) {
-    (void)frame;
+void irq_spurious_handler(void) {
     outb(0x20, 0x20);
 }
 
-static void idt_set_gate(int index, uint64_t handler, uint8_t type_attr) {
-    idt[index].offset_low = handler & 0xFFFF;
+// Assembly stubs declared externally
+extern void isr_stub_0(void);
+extern void isr_stub_8(void);
+extern void isr_stub_32(void);
+extern void isr_stub_33(void);
+extern void isr_stub_47(void);
+extern void isr_stub_default(void);
+
+static void idt_set_gate(int index, void (*handler)(void), uint8_t type_attr) {
+    uint64_t addr = (uint64_t)(uintptr_t)handler;
+    idt[index].offset_low = addr & 0xFFFF;
     idt[index].selector = 0x08;
     idt[index].ist = 0;
     idt[index].type_attr = type_attr;
-    idt[index].offset_mid = (handler >> 16) & 0xFFFF;
-    idt[index].offset_high = (handler >> 32) & 0xFFFFFFFF;
+    idt[index].offset_mid = (addr >> 16) & 0xFFFF;
+    idt[index].offset_high = (addr >> 32) & 0xFFFFFFFF;
     idt[index].zero = 0;
 }
 
 void idt_init(void) {
-    uint64_t noerr = (uint64_t)(uintptr_t)(void*)isr_common_noerr;
-    uint64_t err = (uint64_t)(uintptr_t)(void*)isr_common_error;
-    uint64_t pit = (uint64_t)(uintptr_t)(void*)irq_pit;
-    uint64_t keyboard = (uint64_t)(uintptr_t)(void*)irq_keyboard;
-    uint64_t spurious = (uint64_t)(uintptr_t)(void*)irq_spurious;
-
+    // Set all entries to default handler first
     for (int i = 0; i < 256; i++) {
-        idt_set_gate(i, noerr, 0x8E);
+        idt_set_gate(i, isr_stub_default, 0x8E);
     }
 
-    int error_vectors[] = {8, 10, 11, 12, 13, 14, 17, 21, 29, 30};
-    for (int i = 0; i < 10; i++) {
-        idt_set_gate(error_vectors[i], err, 0x8E);
-    }
-
-    idt_set_gate(32, pit, 0x8E);
-    idt_set_gate(33, keyboard, 0x8E);
-    idt_set_gate(47, spurious, 0x8E);
+    // Override specific vectors
+    idt_set_gate(0, isr_stub_0, 0x8E);   // Divide by zero (no err)
+    idt_set_gate(8, isr_stub_8, 0x8E);   // Double fault (err)
+    idt_set_gate(32, isr_stub_32, 0x8E); // PIT
+    idt_set_gate(33, isr_stub_33, 0x8E); // Keyboard
+    idt_set_gate(47, isr_stub_47, 0x8E); // Spurious
 
     idtr.limit = sizeof(idt) - 1;
     idtr.base = (uint64_t)(uintptr_t)&idt;
