@@ -4,19 +4,19 @@ SECTIONS
 {
     . = 1M;
 
-    .multiboot : { KEEP(*(.multiboot)) }
+    .multiboot : ALIGN(4K) { KEEP(*(.multiboot)) }
 
-    .text : { *(.text*) }
+    .text : ALIGN(4K) { *(.text*) }
 
-    .rodata : { *(.rodata*) }
+    .rodata : ALIGN(4K) { *(.rodata*) }
 
-    .data : { *(.data*) }
+    .data : ALIGN(4K) { *(.data*) }
 
-    .bss : {
+    .bss : ALIGN(4K) {
         *(.bss)
         *(COMMON)
     }
 
-    . = ALIGN(4096);
+    . = ALIGN(4K);
     PROVIDE(_kernel_end = .);
 }
