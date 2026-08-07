@@ -1,6 +1,9 @@
 #include <kernel.h>
 
 void kernel_main(uint32_t magic, uint32_t mbi) {
+    /* DEBUG: 'M' = kernel_main entered successfully */
+    outb(0x3F8, 'M');
+
     serial_init();
     terminal_init();
     gdt_init();
