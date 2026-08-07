@@ -84,6 +84,11 @@ _start:
 
 .code64
 long_mode_start:
+    # DEBUG: 'L' = Long mode entered
+    mov $0x3F8, %dx
+    mov $'L', %al
+    outb %al, %dx
+
     mov $0x10, %ax
     mov %ax, %ds
     mov %ax, %es
@@ -91,7 +96,15 @@ long_mode_start:
     mov %ax, %gs
     mov %ax, %ss
 
+    # DEBUG: 'S' = Segments loaded
+    mov $'S', %al
+    outb %al, %dx
+
     mov $0x90000, %rsp
+
+    # DEBUG: 'K' = Stack set, about to call kernel
+    mov $'K', %al
+    outb %al, %dx
 
     mov $0x74000, %rbx
     mov (%rbx), %edi
