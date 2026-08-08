@@ -16,6 +16,12 @@ multiboot_header_end:
 .global _start
 _start:
     cli
+    
+    /* EARLY DEBUG: Print 'B' before saving registers */
+    mov $0x3F8, %dx
+    mov $'B', %al
+    outb %al, %dx
+    
     mov %eax, 0x74000
     mov %ebx, 0x74004
 
@@ -84,7 +90,7 @@ _start:
 
 .code64
 long_mode_start:
-    # DEBUG: 'L' = Long mode entered
+    /* DEBUG: 'L' = Long mode entered */
     mov $0x3F8, %dx
     mov $'L', %al
     outb %al, %dx
@@ -96,13 +102,13 @@ long_mode_start:
     mov %ax, %gs
     mov %ax, %ss
 
-    # DEBUG: 'S' = Segments loaded
+    /* DEBUG: 'S' = Segments loaded */
     mov $'S', %al
     outb %al, %dx
 
     mov $0x90000, %rsp
 
-    # DEBUG: 'K' = Stack set, about to call kernel
+    /* DEBUG: 'K' = Stack set */
     mov $'K', %al
     outb %al, %dx
 
